@@ -97,4 +97,4 @@ markdown:
 deploy:
   type: git
   repo: git@github.com:litaojian/51pme.git
-  branch: master
+  branch: gh-pages
