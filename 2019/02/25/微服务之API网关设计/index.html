@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.0" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.0.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="&amp;#8195;&amp;#8195;微服务作为一项在云中部署应用和服务的新技术已成为当下最新的热门话题。越来越多的公司开始采用微服务架构加快业务应用程序开发效率，快速响应业务需求变化。选择一个成熟稳定的微服务产品是企业信息化建设中的关键环节，但是企业采用微服务架构并不容易，实施微服务过程中不可或缺的一个很重要的组件就是API网关。微服务若要部署于容器云平台，API网关的实现方式、部署方式、产品特性等就显得">
+<meta name="keywords" content="API网关">
+<meta property="og:type" content="article">
+<meta property="og:title" content="微服务之API网关设计">
+<meta property="og:url" content="https://www.51pme.com/2019/02/25/微服务之API网关设计/index.html">
+<meta property="og:site_name" content="李涛剑的博客">
+<meta property="og:description" content="&amp;#8195;&amp;#8195;微服务作为一项在云中部署应用和服务的新技术已成为当下最新的热门话题。越来越多的公司开始采用微服务架构加快业务应用程序开发效率，快速响应业务需求变化。选择一个成熟稳定的微服务产品是企业信息化建设中的关键环节，但是企业采用微服务架构并不容易，实施微服务过程中不可或缺的一个很重要的组件就是API网关。微服务若要部署于容器云平台，API网关的实现方式、部署方式、产品特性等就显得">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://www.51pme.com/images/apigate-1.png">
+<meta property="og:image" content="https://www.51pme.com/images/apigate-2.png">
+<meta property="og:updated_time" content="2019-02-25T16:31:06.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="微服务之API网关设计">
+<meta name="twitter:description" content="&amp;#8195;&amp;#8195;微服务作为一项在云中部署应用和服务的新技术已成为当下最新的热门话题。越来越多的公司开始采用微服务架构加快业务应用程序开发效率，快速响应业务需求变化。选择一个成熟稳定的微服务产品是企业信息化建设中的关键环节，但是企业采用微服务架构并不容易，实施微服务过程中不可或缺的一个很重要的组件就是API网关。微服务若要部署于容器云平台，API网关的实现方式、部署方式、产品特性等就显得">
+<meta name="twitter:image" content="https://www.51pme.com/images/apigate-1.png">
+
+
+
+
+
+
+  <link rel="canonical" href="https://www.51pme.com/2019/02/25/微服务之API网关设计/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>微服务之API网关设计 | 李涛剑的博客</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">李涛剑的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">资深架构师</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://www.51pme.com/2019/02/25/微服务之API网关设计/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="李涛剑">
+      <meta itemprop="description" content="云平台应用项目实践">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="李涛剑的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">微服务之API网关设计
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-02-25 20:03:09" itemprop="dateCreated datePublished" datetime="2019-02-25T20:03:09+08:00">2019-02-25</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-02-26 00:31:06" itemprop="dateModified" datetime="2019-02-26T00:31:06+08:00">2019-02-26</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/微服务/" itemprop="url" rel="index"><span itemprop="name">微服务</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>&#8195;&#8195;微服务作为一项在云中部署应用和服务的新技术已成为当下最新的热门话题。越来越多的公司开始采用微服务架构加快业务应用程序开发效率，快速响应业务需求变化。选择一个成熟稳定的微服务产品是企业信息化建设中的关键环节，但是企业采用微服务架构并不容易，实施微服务过程中不可或缺的一个很重要的组件就是API网关。微服务若要部署于容器云平台，API网关的实现方式、部署方式、产品特性等就显得至关重要。<br>&#8195;&#8195;网关，顾名思义，网络关口，担负着安全检查、认证授权、路由分发、流量控制、熔断保护等重要的职责。API网关，那就是API的入口、通道，是整个微服务平台的门户，API请求应答必经之路。为了利用容器云弹性伸缩等特性，结合微服务的优点，部署微服务于容器云平台，则API网关的实施部署则会变得更复杂些。</p>
+<h6 id="一、API网关的功能需求"><a href="#一、API网关的功能需求" class="headerlink" title="一、API网关的功能需求"></a>一、API网关的功能需求</h6><p>API网关（API Gateway）是一个基础核心部件，是客户端调用服务的唯一节点和请求应答出入口。API网关封装内部系统的服务接口，并且提供API给各类客户端。通常情况下它还需要实现其他功能，如认证授权、访问控制、路由、负载均衡、缓存、日志、限流限额、转换、映射、过滤、熔断、注册、服务编排、API管理、监控、统计分析等等。<br><img src="/images/apigate-1.png" alt="图1"><br>从API网关的产品功能来看，我们发现到其承担了重要的职责。它不但是整个服务系统的安全屏障，也承担着很多服务治理的能力。所以实现或者选择一个好的API网关，是建设容器云和微服务体系中一个至关重要的事项。这也决定了API网关的部署，要打通内外网的数据交换通道，要尽可能的让内部业务系统只向网关暴露接口，减少系统安全风险。</p>
+<h6 id="二、API网关的作用和价值"><a href="#二、API网关的作用和价值" class="headerlink" title="二、API网关的作用和价值"></a>二、API网关的作用和价值</h6><p>现在有很多人也在宣传API共享经济，建立OpenAPI平台，为合作伙伴或客户提供云端API服务，根据服务的次数来收取一定的费用。建立一个API开放平台，API网关组件是不可或缺的，但另一个重要的原因我们需要一个API网关来承担客户端和微服务通信、微服务组合、协议转换等。<br><img src="/images/apigate-2.png" alt="图2"><br>API网关提供集成能力，统一对外的接口，保护开放的应用，加速应用开发，也实现数据价值，监控分析业务趋势，协助构建开放平台等。</p>
+<ol>
+<li>实现业务应用的互连互通<br>API是系统间集成和企业间整个业务生态系统集成的接口，不管微服务架构或者SOA架构，一个很重要的价值就是实现系统或服务之间的集成，实现数据和服务共享，盘活整个公司的资源，同时减少重复的投资和建设。</li>
+<li>实现统一的标准化规范化的对外接口<br>当实现新的业务应用时或者需要集成不同系统或者服务之间的功能，调用不同服务提供的能力时，利用API网关可以让用户在不感知服务边缘的情况下，利用统一的接口编排组装服务。对于一个公司内部不同的服务，由于历史原因提供的接口可能有不小的差异，通过API网关可以消除这种差异，统一对外提供标准化的接口，比如Restful接口。 当内部服务更新时，也可以通过API网关进行适配转换，对客户端透明，不需要调用方进行调整。</li>
+<li><p>以高标准的安全等级保护开放的应用<br>API网关最重要的能力是其安全能力。减少对外暴露的服务可以增加系统安全性。实现授权认证、访问控制、防范威胁和OWASP漏洞、通过SSO和统一身份管理来等提高安全性，为应用程序、移动App和IoT提供端到端的安全机制;也需要在API网关实现流量控制、限额、过滤、熔断、服务优先级控制、负载均衡等机制来保护业务应用服务的运行安全。不管私有API或者OpenAPI，数据安全性是需要认真面对的课题。</p>
+</li>
+<li><p>简化应用和服务的开发以提升效率<br>在API网关层实现这些安全机制，不但提高安全性，也简化了应用服务的开发。使开发人员专注于业务应用、业务服务的研发，不再考虑基础能力基础组件，提升开发部署的效率，从而提升收益率。通过对 API服务的分类分级，简化和控制开发人员对数据和服务的访问；服务的开放和共享，可以构建更大范围内的协作和开发人员生态体系。加快业务服务业务应用的交付。</p>
+</li>
+<li><p>释放数据价值，促进行业发展<br>数据永远都是有价值的，其价值的大小在于怎么去使用它。基于微服务的API服务提供了一种实现数据价值的方式，由API网关来管理这些API服务，是这些API服务不但可以自己用，也可以实现额外收益。同时又为其他企业提供了节省成本的方式，从而实现战略双赢。</p>
+</li>
+<li><p>监控分析业务趋势，助力智能决策<br>API网关还要承担API的监控和管理职责。哪些API服务调用的多，哪些API服务调用的少，谁调用的多，以及高峰流量时刻、平均流量、响应时间等等都是需要监控和统计分析的。这些数据将有助于我们对API服务进行运维或重构，有助于我们做出合理决策。更为智能决策提供必须的数据支持。</p>
+</li>
+<li><p>协助构建开放平台，建立生态系统<br>开放、合作越来越向各个层面扩展和延伸。大到全球化、地球村，小到团队协作，你已经无法单打独斗。封闭只会束缚自己。所以对企业来说，也是需要逐步构建和合作伙伴的生态系统，构建自己的开放平台以融入这个生态。API 网关是其关键的一环。</p>
+</li>
+</ol>
+<h6 id="三、API网关产品需要的能力"><a href="#三、API网关产品需要的能力" class="headerlink" title="三、API网关产品需要的能力"></a>三、API网关产品需要的能力</h6><p>那么API网关要实现哪些能力？通常情况下，需要考虑下面这些能力：</p>
+<ol>
+<li>使用认证安全<br>安全第一，就像我们的社会交通一样，第一要保证安全，然后才是快速通过。这也是在实现或选择API网关时首先要考虑的问题。安全涉及的问题也比较多，API网关层通常要实现身份统一认证，可对接统一认证中心、权限中心，实现授权认证、访问控制等功能。<br>为了最小化延迟，API网关要尽可能的薄。安全的前提下实现快速通过，不能成为瓶颈，所以需要尽可能的减少延迟。另外考虑采用安全传输，防止数据包被其他人篡改、伪造，防止非公共数据被其他人窃听，要使用数据签名算法和SSL传输，还需要考虑服务基础设施安全以及第三方应用/内容安全。</li>
+<li>服务预处理<br>路由、过滤、流控、限额、熔断、转换、优先级、负载均衡……</li>
+<li>服务组合<br>使用API网关层构建组合服务——业务服务，这涉及到API网关的开发能力，也就是服务组合能力，大部分开源的API网关是不支持的;如果采用商用的API网关产品，基本上都有服务编排和服务注册能力，可以利用API网关的服务注册能力，在API网关层实现服务注册，而不用在每个微服务代码里实现服务注册。这样既可以在API网关层实现服务的编排，也可以充分利用容器云的负载均衡和弹性伸缩等特性，微服务实例不需要注册到注册中心，每个微服务（一到多个微服务实例）仅在注册中心注册一次。这样，也简化了微服务开发，更多的关注微服务业务实现，把服务的注册、编排、流控等等都交给API网关层去实现。</li>
+<li>服务注册<br>API网关需要提供服务注册的能力,将各业务系统中可发布的服务接口按照约定的标准注册到网关上，由提供方依据应用服务器资源配置服务的限流配额、多实例的负载均衡的策略、协议转换格式等。</li>
+<li>API管理<br>通常情况下， API网关层需要考虑实现对API生命周期的管理、配置、监控等能力，也就是API管理的能力。API也可分为私有API和开放API，提供开放API与合作伙伴等共同构建服务生态系统。<br>商用API的管理产品通常包括API网关、API开发工具、管理控制台等组件，提供API开发、配置、部署、监控、更新等整个API生命周期管理。开源的API网关通常比较简单，提供API网关的基础能力或者仅API网关实施框架。</li>
+<li>API网关部署<br>采用微服务部署于容器云平台，API网关作为重要的基础组件，其部署也需要认真考虑。就目前阶段而言，采用容器云也不是所有组件都容器化部署，建议采用中心化非容器化部署，采用双机集群多活高可用模式部署，不要采用主备模式，也不要单机部署，虽然商用的产品处理能力足够强，也要避免可能单点故障，单点瓶颈问题，难以扩展的问题，在负载压力大的需求下，可以考虑分渠道部署方式，比如Web、手机App、PC App等分别部署API网关。</li>
+</ol>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/API网关/" rel="tag"># API网关</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/01/03/Rancher架构设计/" rel="next" title="Rancher V2.0 架构设计">
+                <i class="fa fa-chevron-left"></i> Rancher V2.0 架构设计
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">李涛剑</p>
+              <p class="site-description motion-element" itemprop="description">云平台应用项目实践</p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">3</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  <a href="/categories/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">3</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  <a href="/tags/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">5</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-6"><a class="nav-link" href="#一、API网关的功能需求"><span class="nav-number">1.</span> <span class="nav-text">一、API网关的功能需求</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#二、API网关的作用和价值"><span class="nav-number">2.</span> <span class="nav-text">二、API网关的作用和价值</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#三、API网关产品需要的能力"><span class="nav-number">3.</span> <span class="nav-text">三、API网关产品需要的能力</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">李涛剑</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.0.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.0"></script>
+
+  <script src="/js/src/motion.js?v=7.0.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.0"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.0"></script>
+
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.0"></script>
+<script src="/js/src/post-details.js?v=7.0.0"></script>
+
+
+
+  
+
+
+  <script src="/js/src/bootstrap.js?v=7.0.0"></script>
+
+
+
+  
+
+
+  
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
